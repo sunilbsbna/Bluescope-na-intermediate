@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from typing import List
+from typing import List, Optional
 from app.models import SteelProduct, SteelProductCreate, SteelProductUpdate
 from app.database import db
 
@@ -9,9 +9,21 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[SteelProduct])
-async def get_all_products():
-    """Get all products in inventory"""
-    return db.get_all()
+async def get_all_products(grade: Optional[str] = None):
+    """Get all products in inventory, optionally filtered by grade."""
+    products = db.get_all()
+    if grade is None:
+        return products
+
+    normalized_grade = grade.strip().lower()
+    if not normalized_grade:
+        return products
+
+    return [
+        product
+        for product in products
+        if product.grade.strip().lower() == normalized_grade
+    ]
 
 @router.get("/{product_id}", response_model=SteelProduct)
 async def get_product(product_id: int):
