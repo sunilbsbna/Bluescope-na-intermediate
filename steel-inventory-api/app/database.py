@@ -1,5 +1,5 @@
 from typing import List, Optional
-from app.models import SteelProduct
+from app.models import CoilQualityAssessmentResponse, SteelProduct
 from datetime import datetime
 
 # Simple in-memory database for the lab
@@ -180,10 +180,10 @@ class InMemoryDB:
     def update(self, product_id: int, update_data: dict) -> Optional[SteelProduct]:
         product = self.get_by_id(product_id)
         if product:
-            # BUG: Not updating last_updated timestamp
             for key, value in update_data.items():
                 if value is not None:
                     setattr(product, key, value)
+            product.last_updated = datetime.now()
             return product
         return None
     
@@ -219,6 +219,27 @@ class InMemoryDB:
             updated_ids.append(product_id)
 
         return updated_ids, missing_ids
+
+    def get_coil_quality_assessment(
+        self, product_id: int
+    ) -> Optional[CoilQualityAssessmentResponse]:
+        product = self.get_by_id(product_id)
+        if product is None:
+            return None
+        return product.coil_quality
+
+    def save_coil_quality_assessment(
+        self, product_id: int, assessment_data: dict
+    ) -> Optional[CoilQualityAssessmentResponse]:
+        product = self.get_by_id(product_id)
+        if product is None:
+            return None
+
+        assessment = CoilQualityAssessmentResponse(**assessment_data)
+        product.coil_quality = assessment
+        product.quality_grade = assessment.quality_grade
+        product.last_updated = datetime.now()
+        return assessment
 
 # Global database instance
 db = InMemoryDB()

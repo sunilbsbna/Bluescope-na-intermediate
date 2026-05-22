@@ -5,6 +5,26 @@ from app.database import db
 
 client = TestClient(app)
 
+
+def build_coil_grading_payload(**overrides):
+    payload = {
+        "inspection_id": "INSP-001",
+        "inspected_at": "2026-05-22T10:00:00Z",
+        "inspector_name": "QA Inspector",
+        "grading_version": "1.0",
+        "surface_defect_score": 96,
+        "dimensional_accuracy_percentage": 98,
+        "coating_uniformity_score": 97,
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.fixture
+def reset_inventory_db():
+    db._seed_data()
+    return db
+
 def test_root_endpoint():
     """Test the root endpoint serves the frontend page."""
     response = client.get("/")
@@ -150,6 +170,134 @@ def test_patch_low_stock_alerts_deduplicates_ids():
     data = response.json()
     assert data["updated_count"] == 1
     assert data["product_ids"] == [2]
+
+
+def test_post_grading_assigns_premium_when_all_scores_at_least_95(reset_inventory_db):
+    """POST grading should assign Premium when all coil scores are at least 95."""
+    response = client.post("/inventory/2/grading", json=build_coil_grading_payload())
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["quality_grade"] == "Premium"
+    assert data["surface_defect_score"] == 96
+    assert data["dimensional_accuracy_percentage"] == 98
+    assert data["coating_uniformity_score"] == 97
+
+
+def test_post_grading_assigns_standard_when_all_scores_at_least_80_and_one_below_95(reset_inventory_db):
+    """POST grading should assign Standard when all scores are at least 80 and one is below 95."""
+    response = client.post(
+        "/inventory/2/grading",
+        json=build_coil_grading_payload(
+            surface_defect_score=94,
+            dimensional_accuracy_percentage=88,
+            coating_uniformity_score=83,
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quality_grade"] == "Standard"
+
+
+def test_post_grading_assigns_economy_when_any_score_is_below_80(reset_inventory_db):
+    """POST grading should assign Economy when any score falls below 80."""
+    response = client.post(
+        "/inventory/2/grading",
+        json=build_coil_grading_payload(
+            surface_defect_score=93,
+            dimensional_accuracy_percentage=79,
+            coating_uniformity_score=90,
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quality_grade"] == "Economy"
+
+
+def test_post_grading_rejects_non_coil_products(reset_inventory_db):
+    """POST grading should reject grading requests for non-coil inventory items."""
+    response = client.post("/inventory/1/grading", json=build_coil_grading_payload())
+
+    assert response.status_code == 422
+
+
+def test_post_grading_rejects_missing_required_score(reset_inventory_db):
+    """POST grading should reject payloads missing one of the required quality scores."""
+    payload = build_coil_grading_payload()
+    payload.pop("coating_uniformity_score")
+
+    response = client.post("/inventory/2/grading", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_post_grading_rejects_scores_outside_allowed_range(reset_inventory_db):
+    """POST grading should reject summarized quality scores outside the 0-100 range."""
+    response = client.post(
+        "/inventory/2/grading",
+        json=build_coil_grading_payload(surface_defect_score=101),
+    )
+
+    assert response.status_code == 422
+
+
+def test_post_grading_returns_404_for_unknown_product(reset_inventory_db):
+    """POST grading should return 404 when the target product does not exist."""
+    response = client.post("/inventory/999/grading", json=build_coil_grading_payload())
+
+    assert response.status_code == 404
+
+
+def test_get_grading_returns_the_latest_persisted_assessment(reset_inventory_db):
+    """GET grading should return the assessment created by the grading endpoint."""
+    create_response = client.post(
+        "/inventory/2/grading",
+        json=build_coil_grading_payload(
+            surface_defect_score=94,
+            dimensional_accuracy_percentage=90,
+            coating_uniformity_score=88,
+        ),
+    )
+    assert create_response.status_code == 200
+
+    response = client.get("/inventory/2/grading")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["quality_grade"] == "Standard"
+    assert data["surface_defect_score"] == 94
+    assert data["dimensional_accuracy_percentage"] == 90
+    assert data["coating_uniformity_score"] == 88
+
+
+def test_patch_grading_recalculates_grade_when_scores_change(reset_inventory_db):
+    """PATCH grading should recalculate the grade from the updated coil scores."""
+    create_response = client.post("/inventory/2/grading", json=build_coil_grading_payload())
+    assert create_response.status_code == 200
+    assert create_response.json()["quality_grade"] == "Premium"
+
+    response = client.patch(
+        "/inventory/2/grading",
+        json={"dimensional_accuracy_percentage": 78},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["quality_grade"] == "Economy"
+    assert data["dimensional_accuracy_percentage"] == 78
+
+
+def test_patch_grading_rejects_invalid_updated_scores(reset_inventory_db):
+    """PATCH grading should reject score updates outside the valid summarized range."""
+    create_response = client.post("/inventory/2/grading", json=build_coil_grading_payload())
+    assert create_response.status_code == 200
+
+    response = client.patch(
+        "/inventory/2/grading",
+        json={"coating_uniformity_score": -1},
+    )
+
+    assert response.status_code == 422
 
 # TODO: Add more comprehensive tests:
 # - test_create_product_success
