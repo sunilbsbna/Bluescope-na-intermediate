@@ -38,4 +38,9 @@ python -m uvicorn app.main:app --reload
 The application comes pre-loaded with 10 steel products across different:
 - **Shapes:** Sheet, Coil, Plate, Bar, Tube
 - **Grades:** A36, 304, 316, 4140
+- **Quality Grades:** Premium, Standard, Economy
 - **Locations:** Warehouse-A, Warehouse-B, Warehouse-C
+
+## Product Defaults
+
+- `quality_grade` defaults to `Standard` for both `SteelProduct` and `SteelProductCreate` when the field is omitted.
