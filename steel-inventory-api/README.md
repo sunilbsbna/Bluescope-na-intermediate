@@ -36,6 +36,7 @@ python -m uvicorn app.main:app --reload
 ## Sample Data
 
 The application comes pre-loaded with 10 steel products across different:
+
 - **Shapes:** Sheet, Coil, Plate, Bar, Tube
 - **Grades:** A36, 304, 316, 4140
 - **Quality Grades:** Premium, Standard, Economy

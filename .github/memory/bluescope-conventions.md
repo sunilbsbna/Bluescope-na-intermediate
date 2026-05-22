@@ -1,0 +1,4 @@
+- Standard locations: Warehouse-A = hot-rolled products; Warehouse-B = cold-rolled and coated products; Warehouse-C = long products (bars, tubes)
+- Minimum stock by shape: Sheets 100; Coils 50; Plates 75; Bars 200; Tubes 150
+- Quality grades: Premium = aerospace/automotive; Standard = construction/general manufacturing; Economy = non-critical applications
+- API default: SteelProduct and SteelProductCreate use quality_grade = Standard when omitted
