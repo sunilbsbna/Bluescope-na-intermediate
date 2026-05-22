@@ -62,6 +62,72 @@ def test_search_products_empty_results_handling():
     assert isinstance(products, list)
     assert len(products) == 0
 
+
+def test_get_low_stock_products_returns_only_below_minimum():
+    """Low-stock endpoint should only return products under min_stock_level."""
+    response = client.get("/inventory/low-stock")
+    assert response.status_code == 200
+
+    products = response.json()
+    assert len(products) > 0
+    assert all(product["quantity"] < product["min_stock_level"] for product in products)
+
+
+def test_get_low_stock_products_unsent_only_filter():
+    """unsent_only should filter low-stock records to alerts not yet sent."""
+    response = client.get("/inventory/low-stock", params={"unsent_only": True})
+    assert response.status_code == 200
+
+    products = response.json()
+    assert len(products) > 0
+    assert all(product["quantity"] < product["min_stock_level"] for product in products)
+    assert all(product["alert_sent"] is False for product in products)
+
+
+def test_patch_low_stock_alerts_marks_alert_sent():
+    """PATCH low-stock alerts should mark selected products as sent."""
+    db._seed_data()
+
+    payload = {"product_ids": [2, 7]}
+    response = client.patch("/inventory/low-stock/alerts", json=payload)
+    assert response.status_code == 200
+
+    response_data = response.json()
+    assert response_data["updated_count"] == 2
+    assert set(response_data["product_ids"]) == {2, 7}
+
+    product_2 = db.get_by_id(2)
+    product_7 = db.get_by_id(7)
+    assert product_2 is not None and product_2.alert_sent is True
+    assert product_7 is not None and product_7.alert_sent is True
+
+
+def test_patch_low_stock_alerts_returns_404_for_missing_product_id():
+    """PATCH low-stock alerts should return 404 if any ID does not exist."""
+    db._seed_data()
+
+    response = client.patch("/inventory/low-stock/alerts", json={"product_ids": [2, 999]})
+    assert response.status_code == 404
+    assert "Products not found" in response.json()["detail"]
+
+
+def test_patch_low_stock_alerts_rejects_empty_product_ids():
+    """PATCH low-stock alerts should reject empty ID lists."""
+    response = client.patch("/inventory/low-stock/alerts", json={"product_ids": []})
+    assert response.status_code == 422
+
+
+def test_patch_low_stock_alerts_deduplicates_ids():
+    """PATCH low-stock alerts should update each product at most once."""
+    db._seed_data()
+
+    response = client.patch("/inventory/low-stock/alerts", json={"product_ids": [2, 2, 2]})
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["updated_count"] == 1
+    assert data["product_ids"] == [2]
+
 # TODO: Add more comprehensive tests:
 # - test_create_product_success
 # - test_create_product_duplicate_code

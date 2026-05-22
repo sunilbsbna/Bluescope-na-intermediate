@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Optional
-from app.models import SteelProduct, SteelProductCreate, SteelProductUpdate
+from app.models import (
+    LowStockAlertUpdateRequest,
+    LowStockAlertUpdateResponse,
+    SteelProduct,
+    SteelProductCreate,
+    SteelProductUpdate,
+)
 from app.database import db
 
 router = APIRouter(
@@ -24,6 +30,40 @@ async def get_all_products(grade: Optional[str] = None):
         for product in products
         if product.grade.strip().lower() == normalized_grade
     ]
+
+
+@router.get("/low-stock", response_model=List[SteelProduct])
+async def get_low_stock_products(unsent_only: bool = False):
+    """Return products whose quantity is below their minimum stock level."""
+    low_stock_products = [
+        product
+        for product in db.get_all()
+        if product.quantity < product.min_stock_level
+    ]
+
+    if unsent_only:
+        low_stock_products = [
+            product for product in low_stock_products if not product.alert_sent
+        ]
+
+    return low_stock_products
+
+
+@router.patch("/low-stock/alerts", response_model=LowStockAlertUpdateResponse)
+async def mark_low_stock_alerts_sent(payload: LowStockAlertUpdateRequest):
+    """Mark alert_sent=True for a list of product IDs."""
+    updated_ids, missing_ids = db.mark_alerts_sent(payload.product_ids)
+
+    if missing_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Products not found for IDs: {missing_ids}"
+        )
+
+    return LowStockAlertUpdateResponse(
+        updated_count=len(updated_ids),
+        product_ids=updated_ids,
+    )
 
 @router.get("/{product_id}", response_model=SteelProduct)
 async def get_product(product_id: int):
