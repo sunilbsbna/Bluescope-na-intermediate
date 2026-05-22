@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlueScope Steel Inventory Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>🏭 BlueScope Steel Inventory</h1>
+                <p class="subtitle">Advanced Inventory Management System</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showAddProductModal()">
+                    ➕ Add Product
+                </button>
+                <a href="/docs" class="btn btn-secondary" target="_blank">
+                    📚 API Docs
+                </a>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalProducts">0</div>
+                    <div class="stat-label">Total Products</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalQuantity">0</div>
+                    <div class="stat-label">Total Units</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏢</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="warehouseCount">0</div>
+                    <div class="stat-label">Warehouses</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⚙️</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="gradeCount">0</div>
+                    <div class="stat-label">Steel Grades</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="🔍 Search by product code or grade..." onkeyup="filterProducts()">
+            <select id="shapeFilter" onchange="filterProducts()">
+                <option value="">All Shapes</option>
+                <option value="sheet">Sheet</option>
+                <option value="coil">Coil</option>
+                <option value="plate">Plate</option>
+                <option value="bar">Bar</option>
+                <option value="tube">Tube</option>
+            </select>
+            <select id="locationFilter" onchange="filterProducts()">
+                <option value="">All Locations</option>
+                <option value="Warehouse-A">Warehouse-A</option>
+                <option value="Warehouse-B">Warehouse-B</option>
+                <option value="Warehouse-C">Warehouse-C</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear Filters</button>
+        </div>
+
+        <div class="products-grid" id="productsGrid">
+            <!-- Products will be loaded here -->
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading inventory...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none;">
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Product</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <form id="productForm" onsubmit="saveProduct(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="productCode">Product Code *</label>
+                        <input type="text" id="productCode" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="grade">Steel Grade *</label>
+                        <select id="grade" required>
+                            <option value="">Select Grade</option>
+                            <option value="A36">A36</option>
+                            <option value="304">304</option>
+                            <option value="316">316</option>
+                            <option value="4140">4140</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shape">Shape *</label>
+                        <select id="shape" required>
+                            <option value="">Select Shape</option>
+                            <option value="sheet">Sheet</option>
+                            <option value="coil">Coil</option>
+                            <option value="plate">Plate</option>
+                            <option value="bar">Bar</option>
+                            <option value="tube">Tube</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location *</label>
+                        <select id="location" required>
+                            <option value="">Select Location</option>
+                            <option value="Warehouse-A">Warehouse-A</option>
+                            <option value="Warehouse-B">Warehouse-B</option>
+                            <option value="Warehouse-C">Warehouse-C</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="length">Length (mm) *</label>
+                        <input type="number" id="length" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="width">Width (mm)</label>
+                        <input type="number" id="width" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="thickness">Thickness (mm) *</label>
+                        <input type="number" id="thickness" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity *</label>
+                        <input type="number" id="quantity" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
