@@ -17,6 +17,29 @@ def test_get_all_products():
     response = client.get("/inventory/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    assert all(product["quality_grade"] == "Standard" for product in response.json())
+
+
+def test_create_product_defaults_quality_grade_to_standard():
+    """Create should apply the default quality grade when omitted."""
+    db._seed_data()
+
+    payload = {
+        "product_code": "STL-011",
+        "grade": "A36",
+        "shape": "sheet",
+        "length_mm": 2400,
+        "width_mm": 1200,
+        "thickness_mm": 6.0,
+        "quantity": 150,
+        "min_stock_level": 100,
+        "alert_sent": False,
+        "location": "Warehouse-A"
+    }
+
+    response = client.post("/inventory/", json=payload)
+    assert response.status_code == 201
+    assert response.json()["quality_grade"] == "Standard"
 
 
 def test_search_products_by_existing_grade():

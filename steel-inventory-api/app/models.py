@@ -7,6 +7,7 @@ class SteelProduct(BaseModel):
     id: Optional[int] = None
     product_code: str = Field(..., min_length=3, max_length=20)
     grade: str  # e.g., "A36", "304", "4140"
+    quality_grade: Literal["Premium", "Standard", "Economy"] = "Standard"
     shape: Literal["sheet", "coil", "plate", "bar", "tube"]
     length_mm: float = Field(..., gt=0)
     width_mm: Optional[float] = Field(None, gt=0)
@@ -22,6 +23,7 @@ class SteelProduct(BaseModel):
             "example": {
                 "product_code": "STL-001",
                 "grade": "A36",
+                "quality_grade": "Standard",
                 "shape": "sheet",
                 "length_mm": 2400,
                 "width_mm": 1200,
@@ -36,6 +38,7 @@ class SteelProduct(BaseModel):
 class SteelProductCreate(BaseModel):
     product_code: str
     grade: str
+    quality_grade: Literal["Premium", "Standard", "Economy"] = "Standard"
     shape: Literal["sheet", "coil", "plate", "bar", "tube"]
     length_mm: float
     width_mm: Optional[float] = None
